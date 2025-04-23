@@ -75,6 +75,7 @@ pipeline {
             }
         }
     }
+/*
 
     post {
         success {
@@ -91,3 +92,4 @@ pipeline {
         }
     }
 }
+*/
