@@ -1,47 +1,92 @@
 pipeline {
-    agent any  // Exécute le pipeline sur n'importe quel agent Jenkins disponible
+    agent any
 
     tools {
-        jdk 'jdk17'         // JDK configuré dans Jenkins (voir étape 3)
-        maven 'Maven 3.9.6' // Maven configuré dans Jenkins
+        jdk 'jdk17' // Ton JDK configuré dans Jenkins
+        maven 'Apache Maven 3.9.6' // Ton Maven configuré dans Jenkins
+    }
+
+    environment {
+        MAVEN_OPTS = "-Dmaven.test.failure.ignore=false"
     }
 
     stages {
-        // Étape 1 : Compilation
+
+        stage('Checkout') {
+            steps {
+                git 'https://github.com/<ton-utilisateur>/todo-app.git'
+            }
+        }
+
         stage('Build') {
             steps {
-                sh './mvnw clean package -DskipTests'  // Compile sans exécuter les tests
+                echo "🔨 Compilation en cours..."
+                sh './mvnw clean compile'
             }
         }
 
-        // Étape 2 : Tests et rapports
-        stage('Test') {
+        stage('Tests & Couverture') {
             steps {
-                sh './mvnw test'                       // Exécute les tests
-                junit 'target/surefire-reports/**/*.xml' // Publie les résultats des tests
-                jacoco()                               // Publie la couverture de code
+                echo "🧪 Lancement des tests..."
+                sh './mvnw test'
+
+                echo "📈 Publication des rapports JUnit et Jacoco"
+                junit '**/target/surefire-reports/*.xml'
+                jacoco execPattern: '**/target/jacoco.exec', classPattern: '**/target/classes', sourcePattern: '**/src/main/java', inclusionPattern: '**/*.class', exclusionPattern: ''
             }
         }
 
-        // Étape 3 : Empaquetage et déploiement (exemple avec Nexus)
-        stage('Deploy') {
+        stage('Analyse statique (Checkstyle + PMD)') {
             steps {
-                sh './mvnw deploy -DskipTests'  // Déploie l'artefact dans Nexus
+                echo "🧹 Analyse de la qualité du code..."
+                sh './mvnw checkstyle:checkstyle pmd:pmd'
+                // Les résultats se trouvent dans target/site/
+            }
+        }
+
+        stage('Documentation Maven Site') {
+            steps {
+                echo "📄 Génération de la documentation Maven..."
+                sh './mvnw site'
+                publishHTML(target: [
+                    reportDir: 'target/site',
+                    reportFiles: 'index.html',
+                    reportName: 'Documentation Projet'
+                ])
+            }
+        }
+
+        stage('Packaging') {
+            steps {
+                echo "📦 Création de l'artefact .jar"
+                sh './mvnw package -DskipTests'
+                archiveArtifacts artifacts: '**/target/*.jar', fingerprint: true
+            }
+        }
+
+        stage('Déploiement Nexus (si configuré)') {
+            when {
+                branch 'main'
+            }
+            steps {
+                echo "🚀 Déploiement vers Nexus..."
+                sh './mvnw deploy -DskipTests'
             }
         }
     }
 
-    // Actions post-build (notifications)
     post {
         success {
+            echo "✅ Build réussi !"
             mail to: 'admin@example.com',
-            subject: "Build réussi : ${currentBuild.fullDisplayName}",
-            body: "Le build ${env.BUILD_URL} est réussi."
+                 subject: "✅ Build Réussi: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                 body: "Le build s'est bien déroulé !\n\nVoir: ${env.BUILD_URL}"
         }
         failure {
+            echo "❌ Build échoué !"
             mail to: 'admin@example.com',
-            subject: "Build échoué : ${currentBuild.fullDisplayName}",
-            body: "Le build ${env.BUILD_URL} a échoué."
+                 subject: "❌ Build Échoué: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                 body: "Erreur dans le build !\n\nConsulter: ${env.BUILD_URL}"
         }
     }
 }
