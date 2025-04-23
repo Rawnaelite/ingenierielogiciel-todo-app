@@ -91,5 +91,6 @@ pipeline {
                  body: "Erreur dans le build !\n\nConsulter: ${env.BUILD_URL}"
         }
     }
-}
+
 */
+}
