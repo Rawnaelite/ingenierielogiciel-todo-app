@@ -14,8 +14,8 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                git 'https://github.com/Rawnaelite/ingenierielogiciel-todo-app.git
-'
+                git 'https://github.com/Rawnaelite/ingenierielogiciel-todo-app.git'
+
             }
         }
 
