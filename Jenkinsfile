@@ -65,17 +65,14 @@ pipeline {
                 archiveArtifacts artifacts: '**/target/*.jar', fingerprint: true
             }
         }
-
-        stage('Déploiement Nexus (si configuré)') {
-            when {
-                branch 'main'
-            }
-            steps {
-                echo "🚀 Déploiement vers Nexus..."
-                sh './mvnw deploy -DskipTests'
-            }
-        }
+        stage('Deploy') {
+    steps {
+        echo "🚀 Déploiement vers Nexus..."
+        sh './mvnw deploy -DskipTests'
     }
+   } 
+
+ }
 /*
 
     post {
